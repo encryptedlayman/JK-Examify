@@ -1,13 +1,16 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { CATEGORIES } from '../constants';
-import { BookOpen, ChevronRight, Search, Filter, ArrowLeft, Zap, Star, Plus } from 'lucide-react';
+import { BookOpen, ChevronRight, Search, Filter, ArrowLeft, Zap, Star, Plus, Users } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase';
 import { cn } from '../lib/utils';
 import GenerateMCQModal from '../components/GenerateMCQModal';
 
 export default function Categories() {
   const { categoryId } = useParams();
+  const [user] = useAuthState(auth);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(categoryId || 'all');
   const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; category: string; topic: string }>({
@@ -46,8 +49,14 @@ export default function Categories() {
             Explore <span className="text-blue-600">Exam Topics</span>
           </h1>
           <p className="text-slate-500 text-lg max-w-2xl">
-            Select a category and choose a topic to start your practice session. Each topic contains thousands of high-quality MCQs.
+            Select a category and choose a topic to start your practice session. Each topic contains <span className="text-blue-600 font-bold">1000+ recently asked MCQs</span> with detailed explanations.
           </p>
+          {user?.email === 'flust1996@gmail.com' && (
+            <Link to="/admin" className="inline-flex items-center space-x-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all">
+              <Zap className="w-3 h-3 text-yellow-400" />
+              <span>Admin: Bulk Generate</span>
+            </Link>
+          )}
         </div>
 
         <div className="relative w-full md:w-96">
@@ -113,13 +122,19 @@ export default function Categories() {
                     <div className="w-12 h-12 bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 rounded-2xl flex items-center justify-center transition-colors">
                       <Zap className="w-6 h-6" />
                     </div>
-                    <div className="flex items-center space-x-1 text-yellow-500">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span className="text-xs font-bold">4.8</span>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-1 text-yellow-500">
+                        <Star className="w-4 h-4 fill-current" />
+                        <span className="text-xs font-bold">4.8</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                        <Users className="w-3 h-3" />
+                        <span className="text-[10px] font-black">{Math.floor(Math.random() * 50) + 10} Live</span>
+                      </div>
                     </div>
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{topic}</h3>
-                  <p className="text-slate-500 text-sm mb-6">Master this topic with our curated set of 500+ MCQs and detailed solutions.</p>
+                  <p className="text-slate-500 text-sm mb-6">Master this topic with our curated set of 1000+ MCQs and detailed solutions.</p>
                   <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                     <button
                       onClick={() => openModal(cat.name, topic)}

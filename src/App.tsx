@@ -10,14 +10,21 @@ import Test from './pages/Test';
 import Dashboard from './pages/Dashboard';
 import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
+import Admin from './pages/Admin';
 import { AnimatePresence } from 'motion/react';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) {
   const [user, loading] = useAuthState(auth);
   const location = useLocation();
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  
+  // Simple admin check for demo purposes (can be based on email or custom claims)
+  if (adminOnly && user.email !== 'flust1996@gmail.com') {
+    return <Navigate to="/" replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -55,6 +62,11 @@ export default function App() {
                 </ProtectedRoute>
               } />
               <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/admin" element={
+                <ProtectedRoute adminOnly>
+                  <Admin />
+                </ProtectedRoute>
+              } />
             </Routes>
           </AnimatePresence>
         </main>

@@ -2,11 +2,11 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../firebase';
-import { collection, addDoc, doc, getDoc, updateDoc, increment, setDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, updateDoc, increment, setDoc, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { MCQ, TestResult, UserProfile } from '../types';
-import { getMCQsByTopic } from '../services/geminiService';
+import { getMCQsFromFirestore } from '../services/questionService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trophy, Zap, Award, BarChart3, RotateCcw, Home, Share2 } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trophy, Zap, Award, BarChart3, RotateCcw, Home, Share2, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 
@@ -14,6 +14,7 @@ export default function Test() {
   const { topicId } = useParams();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'practice';
+  const category = searchParams.get('category') || 'General Knowledge';
   const decodedTopic = decodeURIComponent(topicId || '');
   const navigate = useNavigate();
   const [user] = useAuthState(auth);
@@ -26,12 +27,13 @@ export default function Test() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [startTime] = useState(Date.now());
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadMCQs() {
       setLoading(true);
       try {
-        const data = await getMCQsByTopic(decodedTopic, 10);
+        const data = await getMCQsFromFirestore(category, decodedTopic, 10);
         setMcqs(data);
         if (mode === 'mock') {
           setTimeLeft(data.length * 60); // 1 minute per question
@@ -43,7 +45,17 @@ export default function Test() {
       }
     }
     loadMCQs();
-  }, [decodedTopic, mode]);
+  }, [decodedTopic, mode, category]);
+
+  // Real-time activity listener
+  useEffect(() => {
+    const q = query(collection(db, 'testResults'), orderBy('completedAt', 'desc'), limit(5));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const activities = snapshot.docs.map(doc => doc.data());
+      setRecentActivity(activities);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (mode === 'mock' && timeLeft > 0 && !isFinished) {
@@ -259,189 +271,232 @@ export default function Test() {
   const currentMCQ = mcqs[currentIndex];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] shadow-lg border border-slate-100">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6 text-slate-600" />
-          </button>
-          <div>
-            <h1 className="text-xl font-black text-slate-900">{decodedTopic}</h1>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              {mode === 'mock' ? 'Mock Test' : 'Practice Mode'} • {currentIndex + 1} of {mcqs.length}
+    <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col lg:flex-row gap-8">
+      <div className="flex-grow space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] shadow-lg border border-slate-100">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6 text-slate-600" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black text-slate-900">{decodedTopic}</h1>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                {mode === 'mock' ? 'Mock Test' : 'Practice Mode'} • {currentIndex + 1} of {mcqs.length}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center space-x-6">
-          {mode === 'mock' && (
-            <div className={cn(
-              "flex items-center space-x-2 px-4 py-2 rounded-xl font-black transition-colors",
-              timeLeft < 60 ? "bg-red-100 text-red-600 animate-pulse" : "bg-blue-50 text-blue-600"
-            )}>
-              <Clock className="w-5 h-5" />
-              <span>{formatTime(timeLeft)}</span>
-            </div>
-          )}
-          <button
-            onClick={finishTest}
-            className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
-          >
-            Submit Test
-          </button>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${((currentIndex + 1) / mcqs.length) * 100}%` }}
-          className="h-full bg-blue-600"
-        />
-      </div>
-
-      {/* Question Card */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl border border-slate-100 space-y-12 min-h-[500px] flex flex-col"
-        >
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-              <span className="px-4 py-1.5 bg-blue-100 text-blue-600 rounded-full text-xs font-black uppercase tracking-wider">
-                Question {currentIndex + 1}
-              </span>
-              <span className={cn(
-                "px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider",
-                currentMCQ.difficulty === 'Easy' ? "bg-green-100 text-green-600" :
-                currentMCQ.difficulty === 'Medium' ? "bg-orange-100 text-orange-600" : "bg-red-100 text-red-600"
+          <div className="flex items-center space-x-6">
+            {mode === 'mock' && (
+              <div className={cn(
+                "flex items-center space-x-2 px-4 py-2 rounded-xl font-black transition-colors",
+                timeLeft < 60 ? "bg-red-100 text-red-600 animate-pulse" : "bg-blue-50 text-blue-600"
               )}>
-                {currentMCQ.difficulty}
-              </span>
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 leading-tight">
-              {currentMCQ.question}
-            </h2>
+                <Clock className="w-5 h-5" />
+                <span>{formatTime(timeLeft)}</span>
+              </div>
+            )}
+            <button
+              onClick={finishTest}
+              className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+            >
+              Submit Test
+            </button>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
-            {currentMCQ.options.map((option, i) => (
-              <button
-                key={i}
-                onClick={() => handleAnswer(i)}
-                disabled={mode === 'practice' && showExplanation}
-                className={cn(
-                  "p-6 rounded-3xl border-2 text-left transition-all group relative overflow-hidden",
-                  selectedAnswers[currentIndex] === i
-                    ? (mode === 'practice'
-                        ? (i === currentMCQ.answer ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50")
-                        : "border-blue-600 bg-blue-50 shadow-lg shadow-blue-100")
-                    : "border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-white"
-                )}
+        {/* Progress Bar */}
+        <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${((currentIndex + 1) / mcqs.length) * 100}%` }}
+            className="h-full bg-blue-600"
+          />
+        </div>
+
+        {/* Question Card */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentIndex}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl border border-slate-100 space-y-12 min-h-[500px] flex flex-col"
+          >
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3">
+                <span className="px-4 py-1.5 bg-blue-100 text-blue-600 rounded-full text-xs font-black uppercase tracking-wider">
+                  Question {currentIndex + 1}
+                </span>
+                <span className={cn(
+                  "px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider",
+                  currentMCQ.difficulty === 'Easy' ? "bg-green-100 text-green-600" :
+                  currentMCQ.difficulty === 'Medium' ? "bg-orange-100 text-orange-600" : "bg-red-100 text-red-600"
+                )}>
+                  {currentMCQ.difficulty}
+                </span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 leading-tight">
+                {currentMCQ.question}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
+              {currentMCQ.options.map((option, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleAnswer(i)}
+                  disabled={mode === 'practice' && showExplanation}
+                  className={cn(
+                    "p-6 rounded-3xl border-2 text-left transition-all group relative overflow-hidden",
+                    selectedAnswers[currentIndex] === i
+                      ? (mode === 'practice'
+                          ? (i === currentMCQ.answer ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50")
+                          : "border-blue-600 bg-blue-50 shadow-lg shadow-blue-100")
+                      : "border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-white"
+                  )}
+                >
+                  <div className="relative z-10 flex items-center space-x-4">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg transition-colors",
+                      selectedAnswers[currentIndex] === i
+                        ? (mode === 'practice'
+                            ? (i === currentMCQ.answer ? "bg-green-600 text-white" : "bg-red-600 text-white")
+                            : "bg-blue-600 text-white")
+                        : "bg-white text-slate-400 group-hover:text-blue-600"
+                    )}>
+                      {String.fromCharCode(65 + i)}
+                    </div>
+                    <span className={cn(
+                      "text-lg font-bold transition-colors",
+                      selectedAnswers[currentIndex] === i
+                        ? (mode === 'practice'
+                            ? (i === currentMCQ.answer ? "text-green-900" : "text-red-900")
+                            : "text-blue-900")
+                        : "text-slate-600 group-hover:text-slate-900"
+                    )}>
+                      {option}
+                    </span>
+                  </div>
+                  {mode === 'practice' && showExplanation && i === currentMCQ.answer && (
+                    <div className="absolute top-1/2 right-4 -translate-y-1/2">
+                      <CheckCircle className="w-8 h-8 text-green-500" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {mode === 'practice' && showExplanation && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-blue-50 p-8 rounded-3xl border border-blue-100 space-y-4"
               >
-                <div className="relative z-10 flex items-center space-x-4">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg transition-colors",
-                    selectedAnswers[currentIndex] === i
-                      ? (mode === 'practice'
-                          ? (i === currentMCQ.answer ? "bg-green-600 text-white" : "bg-red-600 text-white")
-                          : "bg-blue-600 text-white")
-                      : "bg-white text-slate-400 group-hover:text-blue-600"
-                  )}>
-                    {String.fromCharCode(65 + i)}
-                  </div>
-                  <span className={cn(
-                    "text-lg font-bold transition-colors",
-                    selectedAnswers[currentIndex] === i
-                      ? (mode === 'practice'
-                          ? (i === currentMCQ.answer ? "text-green-900" : "text-red-900")
-                          : "text-blue-900")
-                      : "text-slate-600 group-hover:text-slate-900"
-                  )}>
-                    {option}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-black text-blue-600 uppercase tracking-wider">Explanation</div>
+                  <button
+                    onClick={() => {
+                      setShowExplanation(false);
+                      if (currentIndex < mcqs.length - 1) setCurrentIndex(prev => prev + 1);
+                    }}
+                    className="text-blue-600 font-bold text-sm hover:underline"
+                  >
+                    Next Question
+                  </button>
                 </div>
-                {mode === 'practice' && showExplanation && i === currentMCQ.answer && (
-                  <div className="absolute top-1/2 right-4 -translate-y-1/2">
-                    <CheckCircle className="w-8 h-8 text-green-500" />
-                  </div>
+                <div className="text-blue-900 leading-relaxed prose prose-blue max-w-none">
+                  <ReactMarkdown>{currentMCQ.explanation}</ReactMarkdown>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => {
+              setCurrentIndex(prev => Math.max(0, prev - 1));
+              setShowExplanation(false);
+            }}
+            disabled={currentIndex === 0}
+            className="flex items-center space-x-2 text-slate-500 font-bold hover:text-blue-600 disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6" />
+            <span>Previous</span>
+          </button>
+          <div className="flex items-center space-x-2">
+            {mcqs.map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-all",
+                  i === currentIndex ? "w-8 bg-blue-600" : (selectedAnswers[i] !== undefined ? "bg-blue-200" : "bg-slate-200")
                 )}
-              </button>
+              />
             ))}
           </div>
-
-          {mode === 'practice' && showExplanation && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-blue-50 p-8 rounded-3xl border border-blue-100 space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-black text-blue-600 uppercase tracking-wider">Explanation</div>
-                <button
-                  onClick={() => {
-                    setShowExplanation(false);
-                    if (currentIndex < mcqs.length - 1) setCurrentIndex(prev => prev + 1);
-                  }}
-                  className="text-blue-600 font-bold text-sm hover:underline"
-                >
-                  Next Question
-                </button>
-              </div>
-              <div className="text-blue-900 leading-relaxed prose prose-blue max-w-none">
-                <ReactMarkdown>{currentMCQ.explanation}</ReactMarkdown>
-              </div>
-            </motion.div>
-          )}
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => {
-            setCurrentIndex(prev => Math.max(0, prev - 1));
-            setShowExplanation(false);
-          }}
-          disabled={currentIndex === 0}
-          className="flex items-center space-x-2 text-slate-500 font-bold hover:text-blue-600 disabled:opacity-30 transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6" />
-          <span>Previous</span>
-        </button>
-        <div className="flex items-center space-x-2">
-          {mcqs.map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "w-2 h-2 rounded-full transition-all",
-                i === currentIndex ? "w-8 bg-blue-600" : (selectedAnswers[i] !== undefined ? "bg-blue-200" : "bg-slate-200")
-              )}
-            />
-          ))}
+          <button
+            onClick={() => {
+              if (currentIndex < mcqs.length - 1) {
+                setCurrentIndex(prev => prev + 1);
+                setShowExplanation(false);
+              } else {
+                finishTest();
+              }
+            }}
+            className="flex items-center space-x-2 text-blue-600 font-bold hover:translate-x-1 transition-all"
+          >
+            <span>{currentIndex === mcqs.length - 1 ? 'Finish' : 'Next'}</span>
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
-        <button
-          onClick={() => {
-            if (currentIndex < mcqs.length - 1) {
-              setCurrentIndex(prev => prev + 1);
-              setShowExplanation(false);
-            } else {
-              finishTest();
-            }
-          }}
-          className="flex items-center space-x-2 text-blue-600 font-bold hover:translate-x-1 transition-all"
-        >
-          <span>{currentIndex === mcqs.length - 1 ? 'Finish' : 'Next'}</span>
-          <ChevronRight className="w-6 h-6" />
-        </button>
+      </div>
+
+      {/* Real-time Sidebar */}
+      <div className="w-full lg:w-80 space-y-6">
+        <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100 space-y-6">
+          <h3 className="text-lg font-black text-slate-900 flex items-center space-x-2">
+            <Users className="w-5 h-5 text-blue-600" />
+            <span>Live Activity</span>
+          </h3>
+          <div className="space-y-4">
+            {recentActivity.map((activity, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center space-x-3 p-3 bg-slate-50 rounded-2xl border border-slate-100"
+              >
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs">
+                  {activity.score}/{activity.totalQuestions}
+                </div>
+                <div className="flex-grow min-w-0">
+                  <div className="text-sm font-bold text-slate-900 truncate">{activity.topic}</div>
+                  <div className="text-[10px] text-slate-400 font-medium">Just completed</div>
+                </div>
+              </motion.div>
+            ))}
+            {recentActivity.length === 0 && (
+              <p className="text-center text-slate-400 text-sm py-4">No recent activity</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-[2rem] shadow-xl text-white space-y-4">
+          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+            <Zap className="w-6 h-6" />
+          </div>
+          <h3 className="text-lg font-bold">Pro Tip</h3>
+          <p className="text-blue-100 text-sm leading-relaxed">
+            Practice mode shows explanations immediately. Use Mock mode for a real exam experience with a timer.
+          </p>
+        </div>
       </div>
     </div>
   );
