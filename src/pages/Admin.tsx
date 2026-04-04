@@ -239,6 +239,43 @@ export default function Admin() {
                   </div>
                 </div>
 
+                <div className="pt-8 border-t border-slate-100">
+                  <div className="bg-blue-50 p-8 rounded-[2.5rem] border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="space-y-1">
+                      <h3 className="text-xl font-black text-blue-900">Global Database Seed</h3>
+                      <p className="text-blue-700 text-sm">Add 100 high-quality MCQs to every single category in one go.</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setLoading(true);
+                        setStatus('Starting global seed operation...');
+                        const totalOps = CATEGORIES.length * 5; // 5 batches of 20 = 100 per cat
+                        setProgress({ current: 0, total: totalOps });
+                        try {
+                          for (const cat of CATEGORIES) {
+                            for (let i = 0; i < 5; i++) {
+                              const topic = cat.topics[i % cat.topics.length];
+                              setStatus(`Seeding ${cat.name} (${i+1}/5): ${topic}...`);
+                              await generateAndStoreMCQs(cat.name, topic, 20);
+                              setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+                            }
+                          }
+                          setStatus('Global seed completed! 100 MCQs added to every section.');
+                          loadStats();
+                        } catch (err: any) {
+                          setStatus(`Global seed failed: ${err.message}`);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      className="bg-blue-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-slate-900 transition-all shadow-xl disabled:opacity-50 whitespace-nowrap"
+                    >
+                      Seed All Sections
+                    </button>
+                  </div>
+                </div>
+
                 {status && (
                   <div className={cn(
                     "p-6 rounded-3xl border flex items-start space-x-4",
