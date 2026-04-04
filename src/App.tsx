@@ -10,6 +10,7 @@ import Test from './pages/Test';
 import Dashboard from './pages/Dashboard';
 import Leaderboard from './pages/Leaderboard';
 import { AnimatePresence } from 'motion/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 export default function App() {
   const [user, loading] = useAuthState(auth);
@@ -40,6 +41,7 @@ export default function App() {
           </AnimatePresence>
         </main>
         <Footer />
+        <SpeedInsights />
       </div>
     </Router>
   );
