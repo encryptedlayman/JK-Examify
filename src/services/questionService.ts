@@ -3,8 +3,6 @@ import { db, auth } from "../firebase";
 import { collection, addDoc, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { MCQ } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-
 enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -56,32 +54,39 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-const MCQ_SCHEMA = {
-  type: Type.ARRAY,
-  items: {
-    type: Type.OBJECT,
-    properties: {
-      question: { type: Type.STRING },
-      options: {
-        type: Type.ARRAY,
-        items: { type: Type.STRING },
-        minItems: 4,
-        maxItems: 4
-      },
-      answer: { type: Type.INTEGER, description: "0-3 index of correct option" },
-      explanation: { type: Type.STRING },
-      difficulty: { type: Type.STRING, enum: ["Easy", "Medium", "Hard"] },
-      topic: { type: Type.STRING },
-      category: { type: Type.STRING },
-      examType: { type: Type.ARRAY, items: { type: Type.STRING } }
-    },
-    required: ["question", "options", "answer", "explanation", "difficulty", "topic", "category"]
-  }
-};
-
 export async function generateMCQs(category: string, topic: string, count: number = 10) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("GEMINI_API_KEY is missing");
+    return [];
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const MCQ_SCHEMA = {
+    type: Type.ARRAY,
+    items: {
+      type: Type.OBJECT,
+      properties: {
+        question: { type: Type.STRING },
+        options: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Exactly 4 options"
+        },
+        answer: { type: Type.INTEGER, description: "0-3 index of correct option" },
+        explanation: { type: Type.STRING },
+        difficulty: { type: Type.STRING, description: "Difficulty level: Easy, Medium, or Hard" },
+        topic: { type: Type.STRING },
+        category: { type: Type.STRING },
+        examType: { type: Type.ARRAY, items: { type: Type.STRING } }
+      },
+      required: ["question", "options", "answer", "explanation", "difficulty", "topic", "category"]
+    }
+  };
+
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.1-pro-preview",
     contents: `Generate ${count} high-quality, recently asked multiple-choice questions for the ${category} exam on the topic: ${topic}. 
     Ensure the questions are accurate, have clear explanations, and cover various difficulty levels.
     The exam types should include ${category} and relevant national exams like SSC.`,
@@ -90,6 +95,10 @@ export async function generateMCQs(category: string, topic: string, count: numbe
       responseSchema: MCQ_SCHEMA,
     },
   });
+
+  if (!response.text) {
+    throw new Error("Empty response from Gemini");
+  }
 
   return JSON.parse(response.text) as MCQ[];
 }

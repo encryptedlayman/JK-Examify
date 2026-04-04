@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Zap, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { generateMCQs, DifficultyDistribution } from '../services/geminiService';
 import { db } from '../firebase';

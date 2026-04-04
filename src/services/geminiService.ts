@@ -3,27 +3,6 @@ import { db } from "../firebase";
 import { collection, addDoc, getDocs, query, where, limit } from "firebase/firestore";
 import { MCQ } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-
-const MCQ_SCHEMA = {
-  type: Type.ARRAY,
-  items: {
-    type: Type.OBJECT,
-    properties: {
-      question: { type: Type.STRING },
-      options: {
-        type: Type.ARRAY,
-        items: { type: Type.STRING },
-        description: "Exactly 4 options"
-      },
-      answer: { type: Type.INTEGER, description: "Index of correct option (0-3)" },
-      explanation: { type: Type.STRING },
-      difficulty: { type: Type.STRING, enum: ["Easy", "Medium", "Hard"] }
-    },
-    required: ["question", "options", "answer", "explanation", "difficulty"]
-  }
-};
-
 export interface DifficultyDistribution {
   easy: number;
   medium: number;
@@ -36,22 +15,53 @@ export async function generateMCQs(
   count: number = 10, 
   distribution: DifficultyDistribution = { easy: 40, medium: 40, hard: 20 }
 ): Promise<MCQ[]> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("GEMINI_API_KEY is missing");
+    return [];
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const MCQ_SCHEMA = {
+    type: Type.ARRAY,
+    items: {
+      type: Type.OBJECT,
+      properties: {
+        question: { type: Type.STRING },
+        options: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Exactly 4 options"
+        },
+        answer: { type: Type.INTEGER, description: "Index of correct option (0-3)" },
+        explanation: { type: Type.STRING },
+        difficulty: { type: Type.STRING, description: "Difficulty level: Easy, Medium, or Hard" }
+      },
+      required: ["question", "options", "answer", "explanation", "difficulty"]
+    }
+  };
+
   const prompt = `You are an expert exam paper setter for JKSSB (Jammu & Kashmir Services Selection Board) and SSC (Staff Selection Commission). 
   Generate ${count} high-quality, exam-standard Multiple Choice Questions (MCQs) for the topic "${topic}" in the category "${category}". 
   
+  Difficulty Distribution:
+  - Easy: ${Math.round(count * distribution.easy / 100)} questions
+  - Medium: ${Math.round(count * distribution.medium / 100)} questions
+  - Hard: ${Math.round(count * (100 - distribution.easy - distribution.medium) / 100)} questions
+  
   Guidelines:
-  1. Relevance: Questions must be strictly based on the latest JKSSB/SSC syllabus.
-  2. Difficulty: Follow this distribution: Easy (${distribution.easy}%), Medium (${distribution.medium}%), Hard (${distribution.hard}%).
-  3. Format: Exactly 4 options per question.
-  4. Accuracy: Ensure the correct answer index (0-3) is accurate.
-  5. Explanations: Provide a clear, educational explanation for each answer.
-  6. Language: Use professional, clear English.
+  1. Relevance: Questions must be strictly based on the latest JKSSB/SSC syllabus for ${topic}.
+  2. Format: Exactly 4 distinct and plausible options per question.
+  3. Accuracy: Ensure the correct answer index (0-3) is 100% accurate.
+  4. Explanations: Provide a clear, educational explanation for each answer that helps students learn the concept.
+  5. Language: Use professional, clear English.
   
   Return the result as a JSON array matching the schema.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-pro-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -59,7 +69,11 @@ export async function generateMCQs(
       }
     });
 
-    const rawMcqs = JSON.parse(response.text || "[]");
+    if (!response.text) {
+      throw new Error("Empty response from Gemini");
+    }
+
+    const rawMcqs = JSON.parse(response.text);
     return rawMcqs.map((m: any) => ({
       ...m,
       category,
