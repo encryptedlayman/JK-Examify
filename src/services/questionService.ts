@@ -54,6 +54,27 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
+export async function getMCQCount(category?: string, topic?: string): Promise<number> {
+  const path = "mcqs";
+  try {
+    const mcqCollection = collection(db, path);
+    let q = query(mcqCollection);
+    
+    if (category) {
+      q = query(q, where("category", "==", category));
+    }
+    if (topic) {
+      q = query(q, where("topic", "==", topic));
+    }
+    
+    const snapshot = await getDocs(q);
+    return snapshot.size;
+  } catch (error) {
+    console.error("Error getting MCQ count:", error);
+    return 0;
+  }
+}
+
 export async function generateMCQs(category: string, topic: string, count: number = 10) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
