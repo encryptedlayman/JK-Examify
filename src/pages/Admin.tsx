@@ -29,7 +29,12 @@ export default function Admin() {
             await generateAndStoreMCQs(section.category, topic, 20);
           } catch (err: any) {
             console.error(`Failed for ${topic}:`, err);
-            setStatus(`Error in ${topic}: ${err.message || 'Unknown error'}`);
+            let displayError = err.message;
+            try {
+              const parsed = JSON.parse(err.message);
+              displayError = parsed.error || err.message;
+            } catch (e) {}
+            setStatus(`Error in ${topic}: ${displayError}`);
             // Continue with next topic instead of failing everything
             continue;
           }
@@ -39,7 +44,12 @@ export default function Admin() {
       setStatus('Bulk generation completed!');
     } catch (error: any) {
       console.error('Bulk generation failed:', error);
-      setStatus(`Bulk generation failed: ${error.message || 'Check console'}`);
+      let displayError = error.message;
+      try {
+        const parsed = JSON.parse(error.message);
+        displayError = parsed.error || error.message;
+      } catch (e) {}
+      setStatus(`Bulk generation failed: ${displayError}`);
     } finally {
       setLoading(false);
     }

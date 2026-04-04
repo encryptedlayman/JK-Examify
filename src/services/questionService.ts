@@ -1,9 +1,60 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { collection, addDoc, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { MCQ } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string;
+    email?: string;
+    emailVerified?: boolean;
+    isAnonymous?: boolean;
+    tenantId?: string | null;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email || undefined,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 const MCQ_SCHEMA = {
   type: Type.ARRAY,
@@ -44,22 +95,32 @@ export async function generateAndStoreMCQs(category: string, topic: string, coun
     const questions: MCQ[] = JSON.parse(response.text);
     
     const mcqCollection = collection(db, "mcqs");
-    const promises = questions.map(q => addDoc(mcqCollection, {
-      ...q,
-      createdAt: new Date().toISOString()
-    }));
+    const promises = questions.map(async (q) => {
+      try {
+        return await addDoc(mcqCollection, {
+          ...q,
+          createdAt: new Date().toISOString()
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, "mcqs");
+      }
+    });
 
     await Promise.all(promises);
     return questions;
   } catch (error) {
+    if (error instanceof Error && error.message.includes('authInfo')) {
+      throw error;
+    }
     console.error("Error generating/storing MCQs:", error);
     throw error;
   }
 }
 
 export async function getMCQsFromFirestore(category: string, topic: string, count: number = 10) {
+  const path = "mcqs";
   try {
-    const mcqCollection = collection(db, "mcqs");
+    const mcqCollection = collection(db, path);
     const q = query(
       mcqCollection,
       where("category", "==", category),
@@ -79,8 +140,18 @@ export async function getMCQsFromFirestore(category: string, topic: string, coun
     
     return mcqs;
   } catch (error) {
-    console.error("Error fetching MCQs from Firestore:", error);
-    // Fallback to Gemini if Firestore fails
-    return generateAndStoreMCQs(category, topic, count);
+    if (error instanceof Error && error.message.includes('authInfo')) {
+      throw error;
+    }
+    try {
+      handleFirestoreError(error, OperationType.LIST, path);
+    } catch (e) {
+      // Fallback to Gemini if Firestore fails (unless it's a permission error we want to bubble up)
+      if (error instanceof Error && error.message.includes('permission')) {
+        throw e;
+      }
+      return generateAndStoreMCQs(category, topic, count);
+    }
+    return []; // Should not reach here
   }
 }

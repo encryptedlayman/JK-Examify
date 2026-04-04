@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
 import Admin from './pages/Admin';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AnimatePresence } from 'motion/react';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) {
@@ -40,38 +41,40 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
-        <Navbar />
-        <main className="flex-grow">
-          <AnimatePresence mode="wait">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/category/:categoryId" element={<Categories />} />
-              <Route path="/topic/:topicId" element={<Topic />} />
-              <Route path="/test/:topicId" element={
-                <ProtectedRoute>
-                  <Test />
-                </ProtectedRoute>
-              } />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/admin" element={
-                <ProtectedRoute adminOnly>
-                  <Admin />
-                </ProtectedRoute>
-              } />
-            </Routes>
-          </AnimatePresence>
-        </main>
-        <Footer />
-      </div>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
+          <Navbar />
+          <main className="flex-grow">
+            <AnimatePresence mode="wait">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/category/:categoryId" element={<Categories />} />
+                <Route path="/topic/:topicId" element={<Topic />} />
+                <Route path="/test/:topicId" element={
+                  <ProtectedRoute>
+                    <Test />
+                  </ProtectedRoute>
+                } />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/admin" element={
+                  <ProtectedRoute adminOnly>
+                    <Admin />
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </AnimatePresence>
+          </main>
+          <Footer />
+        </div>
+      </Router>
+    </ErrorBoundary>
   );
 }
