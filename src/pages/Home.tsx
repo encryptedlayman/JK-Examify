@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { BookOpen, Trophy, Zap, CheckCircle, ArrowRight, Star, Users, Award } from 'lucide-react';
+import { BookOpen, Trophy, Zap, CheckCircle, ArrowRight, Star, Users, Award, LogIn } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { cn } from '../lib/utils';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase';
 
 export default function Home() {
+  const [user] = useAuthState(auth);
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -71,11 +74,11 @@ export default function Home() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
-                to="/leaderboard"
+                to="/login"
                 className="w-full sm:w-auto bg-blue-500/20 backdrop-blur-md text-white border border-white/30 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white/10 transition-all flex items-center justify-center space-x-2"
               >
-                <Trophy className="w-5 h-5" />
-                <span>View Leaderboard</span>
+                <LogIn className="w-5 h-5" />
+                <span>Student Login</span>
               </Link>
             </motion.div>
 
@@ -268,13 +271,23 @@ export default function Home() {
             Join thousands of students who are already improving their scores with MockTestPro.
           </p>
           <div className="pt-4">
-            <Link
-              to="/categories"
-              className="bg-white text-blue-600 px-10 py-5 rounded-2xl font-black text-xl hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl active:scale-95 inline-flex items-center space-x-3"
-            >
-              <span>Start Practice Now</span>
-              <ArrowRight className="w-6 h-6" />
-            </Link>
+            {user ? (
+              <Link
+                to="/categories"
+                className="bg-white text-blue-600 px-10 py-5 rounded-2xl font-black text-xl hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl active:scale-95 inline-flex items-center space-x-3"
+              >
+                <span>Start Practice Now</span>
+                <ArrowRight className="w-6 h-6" />
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="bg-white text-blue-600 px-10 py-5 rounded-2xl font-black text-xl hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl active:scale-95 inline-flex items-center space-x-3"
+              >
+                <LogIn className="w-6 h-6" />
+                <span>Student Login</span>
+              </Link>
+            )}
           </div>
         </div>
       </section>

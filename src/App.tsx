@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase';
 import Navbar from './components/Navbar';
@@ -9,7 +9,17 @@ import Topic from './pages/Topic';
 import Test from './pages/Test';
 import Dashboard from './pages/Dashboard';
 import Leaderboard from './pages/Leaderboard';
+import Login from './pages/Login';
 import { AnimatePresence } from 'motion/react';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const [user, loading] = useAuthState(auth);
+  const location = useLocation();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
   const [user, loading] = useAuthState(auth);
@@ -30,11 +40,20 @@ export default function App() {
           <AnimatePresence mode="wait">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/category/:categoryId" element={<Categories />} />
               <Route path="/topic/:topicId" element={<Topic />} />
-              <Route path="/test/:topicId" element={<Test />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/test/:topicId" element={
+                <ProtectedRoute>
+                  <Test />
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
               <Route path="/leaderboard" element={<Leaderboard />} />
             </Routes>
           </AnimatePresence>

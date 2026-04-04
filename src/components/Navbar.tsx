@@ -74,13 +74,13 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleLogin}
+              <Link
+                to="/login"
                 className="bg-blue-600 text-white px-5 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-2"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Login</span>
-              </button>
+              </Link>
             )}
           </div>
 
@@ -129,16 +129,14 @@ export default function Navbar() {
                   <span>Logout</span>
                 </button>
               ) : (
-                <button
-                  onClick={() => {
-                    handleLogin();
-                    setIsMenuOpen(false);
-                  }}
+                <Link
+                  to="/login"
+                  onClick={() => setIsMenuOpen(false)}
                   className="w-full bg-blue-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-all flex items-center justify-center space-x-2"
                 >
                   <LogIn className="w-5 h-5" />
-                  <span>Login with Google</span>
-                </button>
+                  <span>Student Login</span>
+                </Link>
               )}
             </div>
           </motion.div>
