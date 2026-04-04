@@ -4,7 +4,7 @@ import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from '
 import { useState, useEffect } from 'react';
 import { TestResult, UserProfile } from '../types';
 import { motion } from 'motion/react';
-import { LayoutDashboard, Trophy, Zap, Award, BarChart3, Clock, CheckCircle, TrendingUp, BookOpen, Star, Calendar, ArrowRight, ChevronRight, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Trophy, Zap, Award, BarChart3, Clock, CheckCircle, TrendingUp, BookOpen, Star, Calendar, ArrowRight, ChevronRight, AlertCircle, RotateCcw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
@@ -283,14 +283,28 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xl font-black text-slate-900">{result.score}/{result.totalQuestions}</div>
-                    <div className={cn(
-                      "text-xs font-bold px-2 py-0.5 rounded-full",
-                      result.accuracy > 80 ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
-                    )}>
-                      {result.accuracy}% Accuracy
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className="text-xl font-black text-slate-900">{result.score}/{result.totalQuestions}</div>
+                      <div className={cn(
+                        "text-xs font-bold px-2 py-0.5 rounded-full",
+                        result.accuracy > 80 ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
+                      )}>
+                        {result.accuracy}% Accuracy
+                      </div>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const mode = result.testType === 'Full' ? 'mock' : 'practice';
+                        navigate(`/topic/${encodeURIComponent(result.topic)}?category=${encodeURIComponent(result.category)}&mode=${mode}`);
+                      }}
+                      className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all"
+                      title="Retake Test"
+                    >
+                      <RotateCcw className="w-5 h-5" />
+                    </button>
                   </div>
                 </motion.div>
               )) : (

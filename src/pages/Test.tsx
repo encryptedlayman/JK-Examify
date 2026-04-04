@@ -60,6 +60,7 @@ export default function Test() {
   const [isFinished, setIsFinished] = useState(false);
   const [startTime] = useState(Date.now());
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
 
   useEffect(() => {
     async function loadMCQs() {
@@ -345,7 +346,43 @@ export default function Test() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <button
+                onClick={() => setShowRestartConfirm(true)}
+                className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all"
+                title="Restart Test"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </button>
+              
+              <AnimatePresence>
+                {showRestartConfirm && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                    className="absolute top-full right-0 mt-2 w-64 bg-white p-4 rounded-2xl shadow-2xl border border-slate-100 z-50 space-y-4"
+                  >
+                    <p className="text-sm font-bold text-slate-900">Restart the test? All progress will be lost.</p>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="flex-grow bg-red-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-red-700 transition-colors"
+                      >
+                        Yes, Restart
+                      </button>
+                      <button
+                        onClick={() => setShowRestartConfirm(false)}
+                        className="flex-grow bg-slate-100 text-slate-600 py-2 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             {mode === 'mock' && (
               <div className={cn(
                 "flex items-center space-x-2 px-4 py-2 rounded-xl font-black transition-colors",
