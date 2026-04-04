@@ -1,14 +1,20 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { CATEGORIES } from '../constants';
-import { BookOpen, ChevronRight, Search, Filter, ArrowLeft, Zap, Star } from 'lucide-react';
+import { BookOpen, ChevronRight, Search, Filter, ArrowLeft, Zap, Star, Plus } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '../lib/utils';
+import GenerateMCQModal from '../components/GenerateMCQModal';
 
 export default function Categories() {
   const { categoryId } = useParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(categoryId || 'all');
+  const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; category: string; topic: string }>({
+    isOpen: false,
+    category: '',
+    topic: ''
+  });
 
   const filteredCategories = useMemo(() => {
     let cats = CATEGORIES;
@@ -23,6 +29,10 @@ export default function Categories() {
     }
     return cats;
   }, [activeCategory, searchQuery]);
+
+  const openModal = (category: string, topic: string) => {
+    setModalConfig({ isOpen: true, category, topic });
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
@@ -111,7 +121,13 @@ export default function Categories() {
                   <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{topic}</h3>
                   <p className="text-slate-500 text-sm mb-6">Master this topic with our curated set of 500+ MCQs and detailed solutions.</p>
                   <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">500+ MCQs</div>
+                    <button
+                      onClick={() => openModal(cat.name, topic)}
+                      className="text-blue-600 hover:bg-blue-50 p-2 rounded-xl transition-colors"
+                      title="Generate more questions"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
                     <Link
                       to={`/topic/${encodeURIComponent(topic)}`}
                       className="inline-flex items-center space-x-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-bold text-sm group-hover:bg-blue-600 group-hover:text-white transition-all"
@@ -142,6 +158,13 @@ export default function Categories() {
           </div>
         )}
       </div>
+
+      <GenerateMCQModal
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        category={modalConfig.category}
+        topic={modalConfig.topic}
+      />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from '
 import { useState, useEffect } from 'react';
 import { TestResult, UserProfile } from '../types';
 import { motion } from 'motion/react';
-import { LayoutDashboard, Trophy, Zap, Award, BarChart3, Clock, CheckCircle, TrendingUp, BookOpen, Star, Calendar, ArrowRight, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Trophy, Zap, Award, BarChart3, Clock, CheckCircle, TrendingUp, BookOpen, Star, Calendar, ArrowRight, ChevronRight, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
@@ -112,6 +112,52 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Vercel Setup Guide (Only visible in dev or if config is missing) */}
+      {(!import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.DEV) && (
+        <section className="bg-orange-50 border-2 border-orange-200 p-8 rounded-[2.5rem] space-y-6">
+          <div className="flex items-center space-x-3 text-orange-600">
+            <AlertCircle className="w-6 h-6" />
+            <h3 className="text-xl font-bold">Vercel Deployment Guide</h3>
+          </div>
+          <p className="text-orange-700 text-sm">
+            To make this app work on Vercel, you must add your Firebase credentials to the Vercel Dashboard.
+            Copy the values from <code className="bg-orange-100 px-1 rounded">firebase-applet-config.json</code>.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              'VITE_FIREBASE_API_KEY',
+              'VITE_FIREBASE_AUTH_DOMAIN',
+              'VITE_FIREBASE_PROJECT_ID',
+              'VITE_FIREBASE_STORAGE_BUCKET',
+              'VITE_FIREBASE_MESSAGING_SENDER_ID',
+              'VITE_FIREBASE_APP_ID',
+              'VITE_FIREBASE_FIRESTORE_DATABASE_ID'
+            ].map(key => (
+              <div key={key} className="bg-white p-3 rounded-xl border border-orange-100 flex items-center justify-between group">
+                <code className="text-[10px] font-bold text-slate-500">{key}</code>
+                <button 
+                  onClick={() => navigator.clipboard.writeText(key)}
+                  className="text-orange-600 hover:text-orange-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="pt-4">
+            <a 
+              href="https://vercel.com/dashboard" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2 bg-orange-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200"
+            >
+              <span>Open Vercel Dashboard</span>
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Main Stats */}

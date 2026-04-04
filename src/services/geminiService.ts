@@ -24,11 +24,30 @@ const MCQ_SCHEMA = {
   }
 };
 
-export async function generateMCQs(category: string, topic: string, count: number = 10): Promise<MCQ[]> {
-  const prompt = `Generate ${count} high-quality Multiple Choice Questions (MCQs) for the topic "${topic}" in the category "${category}". 
-  The questions should be relevant for JKSSB and SSC exams. 
-  Include a mix of Easy (40%), Medium (40%), and Hard (20%) difficulty levels.
-  Each question must have exactly 4 options, a correct answer index (0-3), and a detailed explanation.`;
+export interface DifficultyDistribution {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
+export async function generateMCQs(
+  category: string, 
+  topic: string, 
+  count: number = 10, 
+  distribution: DifficultyDistribution = { easy: 40, medium: 40, hard: 20 }
+): Promise<MCQ[]> {
+  const prompt = `You are an expert exam paper setter for JKSSB (Jammu & Kashmir Services Selection Board) and SSC (Staff Selection Commission). 
+  Generate ${count} high-quality, exam-standard Multiple Choice Questions (MCQs) for the topic "${topic}" in the category "${category}". 
+  
+  Guidelines:
+  1. Relevance: Questions must be strictly based on the latest JKSSB/SSC syllabus.
+  2. Difficulty: Follow this distribution: Easy (${distribution.easy}%), Medium (${distribution.medium}%), Hard (${distribution.hard}%).
+  3. Format: Exactly 4 options per question.
+  4. Accuracy: Ensure the correct answer index (0-3) is accurate.
+  5. Explanations: Provide a clear, educational explanation for each answer.
+  6. Language: Use professional, clear English.
+  
+  Return the result as a JSON array matching the schema.`;
 
   try {
     const response = await ai.models.generateContent({

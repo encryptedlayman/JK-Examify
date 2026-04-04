@@ -1,11 +1,12 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { CATEGORIES } from '../constants';
-import { BookOpen, Zap, Trophy, Clock, CheckCircle, ArrowLeft, Play, Star, Award, BarChart3 } from 'lucide-react';
+import { BookOpen, Zap, Trophy, Clock, CheckCircle, ArrowLeft, Play, Star, Award, BarChart3, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getMCQsByTopic } from '../services/geminiService';
 import { MCQ } from '../types';
 import { cn } from '../lib/utils';
+import GenerateMCQModal from '../components/GenerateMCQModal';
 
 export default function Topic() {
   const { topicId } = useParams();
@@ -13,21 +14,23 @@ export default function Topic() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [mcqs, setMcqs] = useState<MCQ[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const category = CATEGORIES.find(c => c.topics.includes(decodedTopic));
 
-  useEffect(() => {
-    async function loadMCQs() {
-      setLoading(true);
-      try {
-        const data = await getMCQsByTopic(decodedTopic, 10);
-        setMcqs(data);
-      } catch (error) {
-        console.error('Error loading MCQs:', error);
-      } finally {
-        setLoading(false);
-      }
+  const loadMCQs = async () => {
+    setLoading(true);
+    try {
+      const data = await getMCQsByTopic(decodedTopic, 10);
+      setMcqs(data);
+    } catch (error) {
+      console.error('Error loading MCQs:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadMCQs();
   }, [decodedTopic]);
 
@@ -103,7 +106,16 @@ export default function Topic() {
 
           {/* Practice Modes */}
           <section className="space-y-8">
-            <h2 className="text-2xl font-black text-slate-900">Practice Modes</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-black text-slate-900">Practice Modes</h2>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center space-x-2 text-blue-600 font-bold hover:underline"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Generate More Questions</span>
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {[
                 {
@@ -221,6 +233,14 @@ export default function Topic() {
           </div>
         </div>
       </div>
+
+      <GenerateMCQModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        category={category?.name || 'General Knowledge'}
+        topic={decodedTopic}
+        onGenerated={loadMCQs}
+      />
     </div>
   );
 }
