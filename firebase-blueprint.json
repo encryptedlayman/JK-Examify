@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user profile, progress, and gamification data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string" },
+        "xp": { "type": "integer", "description": "Total experience points" },
+        "streak": { "type": "integer", "description": "Current daily streak" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "rank": { "type": "string", "enum": ["Beginner", "Intermediate", "Expert", "Master"] }
+      },
+      "required": ["uid", "email"]
+    },
+    "MCQ": {
+      "title": "Multiple Choice Question",
+      "description": "A single practice question.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "topic": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "answer": { "type": "integer", "description": "Index of the correct option (0-3)" },
+        "explanation": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"] },
+        "examType": { "type": "array", "items": { "type": "string" }, "description": "e.g. ['JKSSB', 'SSC']" }
+      },
+      "required": ["category", "topic", "question", "options", "answer"]
+    },
+    "TestResult": {
+      "title": "Test Result",
+      "description": "Stores the result of a completed mock test.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "testType": { "type": "string", "enum": ["Topic", "Sectional", "Full"] },
+        "category": { "type": "string" },
+        "topic": { "type": "string" },
+        "score": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "accuracy": { "type": "number" },
+        "timeTaken": { "type": "integer", "description": "Time in seconds" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "score", "totalQuestions", "completedAt"]
+    },
+    "Leaderboard": {
+      "title": "Leaderboard Entry",
+      "description": "Aggregated scores for rankings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "totalXP": { "type": "integer" },
+        "period": { "type": "string", "enum": ["Weekly", "Monthly", "AllTime"] }
+      },
+      "required": ["userId", "totalXP", "period"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents."
+    },
+    "/mcqs/{mcqId}": {
+      "schema": "MCQ",
+      "description": "Collection of all practice questions."
+    },
+    "/testResults/{resultId}": {
+      "schema": "TestResult",
+      "description": "User test history."
+    },
+    "/leaderboards/{boardId}": {
+      "schema": "Leaderboard",
+      "description": "Rankings data."
+    }
+  }
+}

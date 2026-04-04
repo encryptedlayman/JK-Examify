@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Fields: uid, displayName, email, photoURL, xp, streak, lastActive, badges, rank
+    //
+    // Collection: mcqs
+    // Fields: id, category, topic, question, options, answer, explanation, difficulty, examType
+    //
+    // Collection: testResults
+    // Fields: userId, testType, category, topic, score, totalQuestions, accuracy, timeTaken, completedAt
+    //
+    // Collection: leaderboards
+    // Fields: userId, displayName, photoURL, totalXP, period
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             (!('xp' in data) || data.xp is int) &&
+             (!('streak' in data) || data.streak is int);
+    }
+
+    function isValidTestResult(data) {
+      return data.keys().hasAll(['userId', 'score', 'totalQuestions', 'completedAt']) &&
+             data.userId == request.auth.uid &&
+             data.score is int &&
+             data.totalQuestions is int;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /mcqs/{mcqId} {
+      allow read: if true; // Publicly practice
+      allow write: if false; // Admin only (manual for now)
+    }
+
+    match /testResults/{resultId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidTestResult(request.resource.data);
+      allow update: if false; // Results are immutable
+    }
+
+    match /leaderboards/{boardId} {
+      allow read: if true;
+      allow write: if false; // System updates only
+    }
+  }
+}
