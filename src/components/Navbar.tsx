@@ -12,15 +12,6 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
-  };
-
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/');
@@ -74,13 +65,13 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              <Link
-                to="/login"
+              <button
+                onClick={() => navigate('/login')}
                 className="bg-blue-600 text-white px-5 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-2"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Login</span>
-              </Link>
+              </button>
             )}
           </div>
 

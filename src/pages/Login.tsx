@@ -4,10 +4,11 @@ import { auth, googleProvider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Login() {
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || "/dashboard";
@@ -19,10 +20,18 @@ export default function Login() {
   }, [user, navigate, from]);
 
   const handleGoogleLogin = async () => {
+    setError(null);
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error('Login failed:', error);
+    } catch (err: any) {
+      console.error('Login failed:', err);
+      if (err.code === 'auth/popup-blocked') {
+        setError('Popup was blocked by your browser. Please allow popups for this site.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorized for Google Login. Please add it to your Firebase Console.');
+      } else {
+        setError('Login failed. Please try again or check your internet connection.');
+      }
     }
   };
 
@@ -86,6 +95,15 @@ export default function Login() {
           </div>
 
           <div className="space-y-6">
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-medium"
+              >
+                {error}
+              </motion.div>
+            )}
             <button
               onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center space-x-4 bg-white border-2 border-slate-100 p-5 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all group shadow-sm hover:shadow-xl active:scale-95"
