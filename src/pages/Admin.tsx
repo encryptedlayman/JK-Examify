@@ -25,15 +25,21 @@ export default function Admin() {
       for (const section of SECTIONS) {
         for (const topic of section.topics) {
           setStatus(`Generating questions for ${section.category} - ${topic}...`);
-          // Generate 20 questions at a time to avoid timeouts
-          await generateAndStoreMCQs(section.category, topic, 20);
+          try {
+            await generateAndStoreMCQs(section.category, topic, 20);
+          } catch (err: any) {
+            console.error(`Failed for ${topic}:`, err);
+            setStatus(`Error in ${topic}: ${err.message || 'Unknown error'}`);
+            // Continue with next topic instead of failing everything
+            continue;
+          }
           setProgress(prev => ({ ...prev, current: prev.current + 1 }));
         }
       }
-      setStatus('Bulk generation completed successfully!');
-    } catch (error) {
+      setStatus('Bulk generation completed!');
+    } catch (error: any) {
       console.error('Bulk generation failed:', error);
-      setStatus('Error during bulk generation. Check console.');
+      setStatus(`Bulk generation failed: ${error.message || 'Check console'}`);
     } finally {
       setLoading(false);
     }

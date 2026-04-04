@@ -1,10 +1,11 @@
 import { motion } from 'motion/react';
 import { LogIn, ShieldCheck, Zap, Trophy, ArrowRight, CheckCircle } from 'lucide-react';
-import { auth, googleProvider } from '../firebase';
+import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useEffect, useState } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function Login() {
   const [user, loading] = useAuthState(auth);
@@ -15,7 +16,27 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate(from, { replace: true });
+      const syncUser = async () => {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            displayName: user.displayName || 'User',
+            email: user.email || '',
+            photoURL: user.photoURL || '',
+            xp: 0,
+            streak: 0,
+            lastActive: new Date().toISOString(),
+            badges: [],
+            rank: 'Beginner',
+            role: user.email === 'flust1996@gmail.com' ? 'admin' : 'user'
+          });
+        }
+        navigate(from, { replace: true });
+      };
+      syncUser();
     }
   }, [user, navigate, from]);
 

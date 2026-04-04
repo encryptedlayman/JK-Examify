@@ -13,7 +13,8 @@
         "streak": { "type": "integer", "description": "Current daily streak" },
         "lastActive": { "type": "string", "format": "date-time" },
         "badges": { "type": "array", "items": { "type": "string" } },
-        "rank": { "type": "string", "enum": ["Beginner", "Intermediate", "Expert", "Master"] }
+        "rank": { "type": "string", "enum": ["Beginner", "Intermediate", "Expert", "Master"] },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User role for permissions" }
       },
       "required": ["uid", "email"]
     },

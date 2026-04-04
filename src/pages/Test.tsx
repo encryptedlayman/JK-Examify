@@ -123,7 +123,8 @@ export default function Test() {
             streak: 1,
             lastActive: new Date().toISOString(),
             badges: [],
-            rank: 'Beginner'
+            rank: 'Beginner',
+            role: user.email === 'flust1996@gmail.com' ? 'admin' : 'user'
           });
         }
       } catch (error) {
