@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import Admin from './pages/Admin';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AnimatePresence } from 'motion/react';
+import { Analytics } from '@vercel/analytics/react';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) {
   const [user, loading] = useAuthState(auth);
@@ -74,6 +75,7 @@ export default function App() {
           </main>
           <Footer />
         </div>
+        <Analytics />
       </Router>
     </ErrorBoundary>
   );
