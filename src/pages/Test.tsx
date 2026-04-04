@@ -10,6 +10,38 @@ import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trophy, Zap, Aw
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 export default function Test() {
   const { topicId } = useParams();
   const [searchParams] = useSearchParams();
@@ -49,10 +81,13 @@ export default function Test() {
 
   // Real-time activity listener
   useEffect(() => {
-    const q = query(collection(db, 'testResults'), orderBy('completedAt', 'desc'), limit(5));
+    const path = 'testResults';
+    const q = query(collection(db, path), orderBy('completedAt', 'desc'), limit(5));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const activities = snapshot.docs.map(doc => doc.data());
       setRecentActivity(activities);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
     });
     return () => unsubscribe();
   }, []);
@@ -100,32 +135,51 @@ export default function Test() {
 
     if (user) {
       try {
-        await addDoc(collection(db, 'testResults'), result);
+        const resultsPath = 'testResults';
+        try {
+          await addDoc(collection(db, resultsPath), result);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.CREATE, resultsPath);
+        }
         
         // Update User XP and Stats
+        const userPath = `users/${user.uid}`;
         const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
+        let userSnap;
+        try {
+          userSnap = await getDoc(userRef);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, userPath);
+        }
         
         const xpGained = correctCount * 10 + (mode === 'mock' ? 50 : 20);
         
-        if (userSnap.exists()) {
-          await updateDoc(userRef, {
-            xp: increment(xpGained),
-            lastActive: new Date().toISOString()
-          });
+        if (userSnap?.exists()) {
+          try {
+            await updateDoc(userRef, {
+              xp: increment(xpGained),
+              lastActive: new Date().toISOString()
+            });
+          } catch (error) {
+            handleFirestoreError(error, OperationType.UPDATE, userPath);
+          }
         } else {
-          await setDoc(userRef, {
-            uid: user.uid,
-            displayName: user.displayName || 'User',
-            email: user.email || '',
-            photoURL: user.photoURL || '',
-            xp: xpGained,
-            streak: 1,
-            lastActive: new Date().toISOString(),
-            badges: [],
-            rank: 'Beginner',
-            role: user.email === 'flust1996@gmail.com' ? 'admin' : 'user'
-          });
+          try {
+            await setDoc(userRef, {
+              uid: user.uid,
+              displayName: user.displayName || 'User',
+              email: user.email || '',
+              photoURL: user.photoURL || '',
+              xp: xpGained,
+              streak: 1,
+              lastActive: new Date().toISOString(),
+              badges: [],
+              rank: 'Beginner',
+              role: user.email === 'flust1996@gmail.com' ? 'admin' : 'user'
+            });
+          } catch (error) {
+            handleFirestoreError(error, OperationType.CREATE, userPath);
+          }
         }
       } catch (error) {
         console.error('Error saving result:', error);

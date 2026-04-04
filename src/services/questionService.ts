@@ -79,20 +79,24 @@ const MCQ_SCHEMA = {
   }
 };
 
+export async function generateMCQs(category: string, topic: string, count: number = 10) {
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: `Generate ${count} high-quality, recently asked multiple-choice questions for the ${category} exam on the topic: ${topic}. 
+    Ensure the questions are accurate, have clear explanations, and cover various difficulty levels.
+    The exam types should include ${category} and relevant national exams like SSC.`,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: MCQ_SCHEMA,
+    },
+  });
+
+  return JSON.parse(response.text) as MCQ[];
+}
+
 export async function generateAndStoreMCQs(category: string, topic: string, count: number = 10) {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Generate ${count} high-quality, recently asked multiple-choice questions for the ${category} exam on the topic: ${topic}. 
-      Ensure the questions are accurate, have clear explanations, and cover various difficulty levels.
-      The exam types should include ${category} and relevant national exams like SSC.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: MCQ_SCHEMA,
-      },
-    });
-
-    const questions: MCQ[] = JSON.parse(response.text);
+    const questions = await generateMCQs(category, topic, count);
     
     const mcqCollection = collection(db, "mcqs");
     const promises = questions.map(async (q) => {
@@ -102,16 +106,16 @@ export async function generateAndStoreMCQs(category: string, topic: string, coun
           createdAt: new Date().toISOString()
         });
       } catch (error) {
-        handleFirestoreError(error, OperationType.CREATE, "mcqs");
+        // If it's a permission error, we just log it and return the questions anyway
+        // This allows the admin to see what would have been stored
+        console.warn("Could not store MCQ due to permissions:", error);
+        return null;
       }
     });
 
     await Promise.all(promises);
     return questions;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('authInfo')) {
-      throw error;
-    }
     console.error("Error generating/storing MCQs:", error);
     throw error;
   }
@@ -134,24 +138,16 @@ export async function getMCQsFromFirestore(category: string, topic: string, coun
     // If not enough questions in DB, generate more
     if (mcqs.length < count) {
       const needed = count - mcqs.length;
+      // Only try to store if we think we might have permission (admin)
+      // For now, we'll just call generateAndStoreMCQs and it will handle permission errors internally
       const newMcqs = await generateAndStoreMCQs(category, topic, needed);
       return [...mcqs, ...newMcqs];
     }
     
     return mcqs;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('authInfo')) {
-      throw error;
-    }
-    try {
-      handleFirestoreError(error, OperationType.LIST, path);
-    } catch (e) {
-      // Fallback to Gemini if Firestore fails (unless it's a permission error we want to bubble up)
-      if (error instanceof Error && error.message.includes('permission')) {
-        throw e;
-      }
-      return generateAndStoreMCQs(category, topic, count);
-    }
-    return []; // Should not reach here
+    // If it's a permission error on LIST, we fallback to just generating
+    console.warn("Firestore list failed, falling back to generation:", error);
+    return generateMCQs(category, topic, count);
   }
 }

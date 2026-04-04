@@ -84,7 +84,7 @@ service cloud.firestore {
     }
 
     match /testResults/{resultId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid);
+      allow read: if isAuthenticated(); // Allow seeing live activity feed
       allow create: if isAuthenticated() && isValidTestResult(request.resource.data);
       allow update: if false; // Results are immutable
     }

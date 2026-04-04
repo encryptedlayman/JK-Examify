@@ -8,6 +8,38 @@ import { LayoutDashboard, Trophy, Zap, Award, BarChart3, Clock, CheckCircle, Tre
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 export default function Dashboard() {
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
@@ -25,22 +57,32 @@ export default function Dashboard() {
       setLoading(true);
       try {
         // Load Profile
+        const userPath = `users/${user!.uid}`;
         const userRef = doc(db, 'users', user!.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setProfile(userSnap.data() as UserProfile);
+        try {
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setProfile(userSnap.data() as UserProfile);
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, userPath);
         }
 
         // Load Results
-        const resultsRef = collection(db, 'testResults');
+        const resultsPath = 'testResults';
+        const resultsRef = collection(db, resultsPath);
         const q = query(
           resultsRef,
           where('userId', '==', user!.uid),
           orderBy('completedAt', 'desc'),
           limit(10)
         );
-        const resultsSnap = await getDocs(q);
-        setResults(resultsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
+        try {
+          const resultsSnap = await getDocs(q);
+          setResults(resultsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.LIST, resultsPath);
+        }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {

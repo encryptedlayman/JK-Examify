@@ -1,10 +1,42 @@
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, query, orderBy, limit, getDocs, where, doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { useState, useEffect } from 'react';
 import { LeaderboardEntry } from '../types';
 import { motion } from 'motion/react';
 import { Trophy, Award, Zap, Star, Search, Filter, ChevronRight, Medal, Users, TrendingUp } from 'lucide-react';
 import { cn } from '../lib/utils';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
@@ -17,22 +49,27 @@ export default function Leaderboard() {
       try {
         // In a real app, we'd have a scheduled function to update this.
         // For now, we'll query the users collection and sort by XP.
-        const usersRef = collection(db, 'users');
+        const path = 'users';
+        const usersRef = collection(db, path);
         const q = query(usersRef, orderBy('xp', 'desc'), limit(50));
-        const snapshot = await getDocs(q);
-        
-        const data = snapshot.docs.map(doc => {
-          const userData = doc.data();
-          return {
-            userId: doc.id,
-            displayName: userData.displayName || 'Anonymous',
-            photoURL: userData.photoURL || '',
-            totalXP: userData.xp || 0,
-            period
-          } as LeaderboardEntry;
-        });
-        
-        setEntries(data);
+        try {
+          const snapshot = await getDocs(q);
+          
+          const data = snapshot.docs.map(doc => {
+            const userData = doc.data();
+            return {
+              userId: doc.id,
+              displayName: userData.displayName || 'Anonymous',
+              photoURL: userData.photoURL || '',
+              totalXP: userData.xp || 0,
+              period
+            } as LeaderboardEntry;
+          });
+          
+          setEntries(data);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.LIST, path);
+        }
       } catch (error) {
         console.error('Error loading leaderboard:', error);
       } finally {
