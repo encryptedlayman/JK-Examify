@@ -82,7 +82,7 @@ export default function Login() {
             </div>
             <h1 className="text-5xl font-black leading-tight">
               Welcome to <br />
-              <span className="text-blue-200">MockTestPro</span>
+              <span className="text-blue-200">JK Examify</span>
             </h1>
             <p className="text-blue-100 text-lg max-w-md">
               The ultimate practice platform for JKSSB and SSC aspirants. Join thousands of students today.
@@ -156,7 +156,7 @@ export default function Login() {
           </div>
 
           <p className="text-center text-slate-400 text-xs leading-relaxed">
-            By continuing, you agree to MockTestPro's <br />
+            By continuing, you agree to JK Examify's <br />
             <span className="text-blue-600 font-bold hover:underline cursor-pointer">Terms of Service</span> and <span className="text-blue-600 font-bold hover:underline cursor-pointer">Privacy Policy</span>.
           </p>
         </div>

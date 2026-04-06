@@ -29,10 +29,10 @@ export default function Navbar() {
         <div className="flex justify-between h-16 items-center">
           <Link to="/" className="flex items-center space-x-2 group">
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform">
-              M
+              J
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-900 hidden sm:block">
-              MockTest<span className="text-blue-600">Pro</span>
+              JK <span className="text-blue-600">Examify</span>
             </span>
           </Link>
 

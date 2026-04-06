@@ -48,7 +48,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight"
             >
-              Master Your Exams with <span className="text-blue-300">MockTestPro</span>
+              Master Your Exams with <span className="text-blue-300">JK Examify</span>
             </motion.h1>
 
             <motion.p
@@ -194,7 +194,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <div className="space-y-8">
               <h2 className="text-4xl md:text-5xl font-black leading-tight">
-                Why Choose <span className="text-blue-500">MockTestPro?</span>
+                Why Choose <span className="text-blue-500">JK Examify?</span>
               </h2>
               <p className="text-slate-400 text-lg leading-relaxed">
                 We provide a comprehensive learning experience designed to help you succeed in competitive exams like JKSSB and SSC.
@@ -268,7 +268,7 @@ export default function Home() {
             Ready to Ace Your Exams?
           </h2>
           <p className="text-blue-100 text-xl max-w-2xl mx-auto">
-            Join thousands of students who are already improving their scores with MockTestPro.
+            Join thousands of students who are already improving their scores with JK Examify.
           </p>
           <div className="pt-4">
             {user ? (

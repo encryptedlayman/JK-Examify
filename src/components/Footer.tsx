@@ -9,10 +9,10 @@ export default function Footer() {
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                M
+                J
               </div>
               <span className="text-xl font-bold tracking-tight text-white">
-                MockTest<span className="text-blue-600">Pro</span>
+                JK <span className="text-blue-600">Examify</span>
               </span>
             </Link>
             <p className="text-sm leading-relaxed text-slate-400">
@@ -50,7 +50,7 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center space-x-2">
                 <Mail className="w-4 h-4 text-blue-500" />
-                <span>support@mocktestpro.com</span>
+                <span>support@jkexamify.com</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-blue-500" />
@@ -65,7 +65,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
-          <p>© 2026 MockTestPro. All rights reserved. Built for JKSSB & SSC aspirants.</p>
+          <p>© 2026 JK Examify. All rights reserved. Built for JKSSB & SSC aspirants.</p>
         </div>
       </div>
     </footer>
