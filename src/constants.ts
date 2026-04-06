@@ -1,7 +1,10 @@
+export const EXAM_TYPES = ['JKSSB', 'SSC'] as const;
+
 export const CATEGORIES = [
   {
     id: 'gk',
     name: 'General Knowledge',
+    examTypes: ['JKSSB', 'SSC'],
     topics: [
       'History (Ancient, Medieval, Modern)',
       'Geography (India + World)',
@@ -14,6 +17,7 @@ export const CATEGORIES = [
   {
     id: 'ga',
     name: 'General Awareness',
+    examTypes: ['JKSSB', 'SSC'],
     topics: [
       'Current Affairs (Monthly + Yearly)',
       'Government Schemes',
@@ -25,6 +29,7 @@ export const CATEGORIES = [
   {
     id: 'english',
     name: 'English',
+    examTypes: ['JKSSB', 'SSC'],
     topics: [
       'Grammar (Tenses, Articles, Prepositions)',
       'Vocabulary',
@@ -37,6 +42,7 @@ export const CATEGORIES = [
   {
     id: 'math',
     name: 'Mathematics',
+    examTypes: ['JKSSB', 'SSC'],
     topics: [
       'Arithmetic',
       'Algebra',
@@ -49,6 +55,7 @@ export const CATEGORIES = [
   {
     id: 'reasoning',
     name: 'Reasoning',
+    examTypes: ['JKSSB', 'SSC'],
     topics: [
       'Verbal Reasoning',
       'Non-Verbal Reasoning',
@@ -61,6 +68,7 @@ export const CATEGORIES = [
   {
     id: 'computer',
     name: 'Computer Knowledge',
+    examTypes: ['JKSSB', 'SSC'],
     topics: [
       'Basics of Computer',
       'MS Office',
@@ -73,6 +81,7 @@ export const CATEGORIES = [
   {
     id: 'jk_gk',
     name: 'Jammu & Kashmir Specific GK',
+    examTypes: ['JKSSB'],
     topics: [
       'JK History',
       'JK Geography',

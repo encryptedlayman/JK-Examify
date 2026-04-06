@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { CATEGORIES } from '../constants';
-import { BookOpen, ChevronRight, Search, Filter, ArrowLeft, Zap, Star, Plus, Users } from 'lucide-react';
+import { CATEGORIES, EXAM_TYPES } from '../constants';
+import { BookOpen, ChevronRight, Search, Filter, ArrowLeft, Zap, Star, Plus, Users, GraduationCap } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
@@ -13,6 +13,7 @@ export default function Categories() {
   const [user] = useAuthState(auth);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(categoryId || 'all');
+  const [activeExamType, setActiveExamType] = useState<string>('all');
   const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; category: string; topic: string }>({
     isOpen: false,
     category: '',
@@ -21,9 +22,18 @@ export default function Categories() {
 
   const filteredCategories = useMemo(() => {
     let cats = CATEGORIES;
+    
+    // Filter by Exam Type
+    if (activeExamType !== 'all') {
+      cats = cats.filter(c => c.examTypes.includes(activeExamType as any));
+    }
+
+    // Filter by Category
     if (activeCategory !== 'all') {
       cats = cats.filter(c => c.id === activeCategory);
     }
+
+    // Filter by Search Query
     if (searchQuery) {
       cats = cats.map(c => ({
         ...c,
@@ -31,7 +41,7 @@ export default function Categories() {
       })).filter(c => c.topics.length > 0);
     }
     return cats;
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, activeExamType, searchQuery]);
 
   const openModal = (category: string, topic: string) => {
     setModalConfig({ isOpen: true, category, topic });
@@ -71,6 +81,47 @@ export default function Categories() {
         </div>
       </div>
 
+      {/* Exam Type Filter */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2 text-slate-500 text-sm font-bold uppercase tracking-wider">
+          <GraduationCap className="w-4 h-4" />
+          <span>Filter by Exam</span>
+        </div>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => {
+              setActiveExamType('all');
+              setActiveCategory('all');
+            }}
+            className={cn(
+              "px-6 py-2.5 rounded-xl font-bold transition-all border",
+              activeExamType === 'all' 
+                ? "bg-slate-900 text-white border-slate-900 shadow-lg" 
+                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+            )}
+          >
+            All Exams
+          </button>
+          {EXAM_TYPES.map((type) => (
+            <button
+              key={type}
+              onClick={() => {
+              setActiveExamType(type);
+              setActiveCategory('all');
+            }}
+              className={cn(
+                "px-6 py-2.5 rounded-xl font-bold transition-all border",
+                activeExamType === type 
+                  ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100" 
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              )}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Category Filter Tabs */}
       <div className="flex items-center space-x-2 overflow-x-auto pb-4 scrollbar-hide">
         <button
@@ -82,7 +133,7 @@ export default function Categories() {
         >
           All Categories
         </button>
-        {CATEGORIES.map((cat) => (
+        {CATEGORIES.filter(cat => activeExamType === 'all' || cat.examTypes.includes(activeExamType as any)).map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
@@ -165,7 +216,7 @@ export default function Categories() {
             <h3 className="text-2xl font-bold text-slate-900">No topics found</h3>
             <p className="text-slate-500">Try searching for something else or browse all categories.</p>
             <button
-              onClick={() => { setSearchQuery(''); setActiveCategory('all'); }}
+              onClick={() => { setSearchQuery(''); setActiveCategory('all'); setActiveExamType('all'); }}
               className="text-blue-600 font-bold hover:underline"
             >
               Clear all filters
