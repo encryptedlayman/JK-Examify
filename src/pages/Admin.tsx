@@ -242,28 +242,32 @@ export default function Admin() {
                 <div className="pt-8 border-t border-slate-100">
                   <div className="bg-blue-50 p-8 rounded-[2.5rem] border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="space-y-1">
-                      <h3 className="text-xl font-black text-blue-900">Global Database Seed</h3>
-                      <p className="text-blue-700 text-sm">Add 100 high-quality MCQs to every single category in one go.</p>
+                      <h3 className="text-xl font-black text-blue-900">Deep Database Seed</h3>
+                      <p className="text-blue-700 text-sm">Add 500 high-quality MCQs to every single category (topic-wise).</p>
                     </div>
                     <button
                       onClick={async () => {
                         setLoading(true);
-                        setStatus('Starting global seed operation...');
-                        const totalOps = CATEGORIES.length * 5; // 5 batches of 20 = 100 per cat
+                        setStatus('Starting deep seed operation (500 per category)...');
+                        const questionsPerCat = 500;
+                        const batchSize = 20;
+                        const batchesPerCat = Math.ceil(questionsPerCat / batchSize);
+                        const totalOps = CATEGORIES.length * batchesPerCat;
+                        
                         setProgress({ current: 0, total: totalOps });
                         try {
                           for (const cat of CATEGORIES) {
-                            for (let i = 0; i < 5; i++) {
+                            for (let i = 0; i < batchesPerCat; i++) {
                               const topic = cat.topics[i % cat.topics.length];
-                              setStatus(`Seeding ${cat.name} (${i+1}/5): ${topic}...`);
-                              await generateAndStoreMCQs(cat.name, topic, 20);
+                              setStatus(`Seeding ${cat.name} (${i+1}/${batchesPerCat}): ${topic}...`);
+                              await generateAndStoreMCQs(cat.name, topic, batchSize);
                               setProgress(prev => ({ ...prev, current: prev.current + 1 }));
                             }
                           }
-                          setStatus('Global seed completed! 100 MCQs added to every section.');
+                          setStatus('Deep seed completed! 500 MCQs added to every section.');
                           loadStats();
                         } catch (err: any) {
-                          setStatus(`Global seed failed: ${err.message}`);
+                          setStatus(`Deep seed failed: ${err.message}`);
                         } finally {
                           setLoading(false);
                         }
@@ -271,7 +275,7 @@ export default function Admin() {
                       disabled={loading}
                       className="bg-blue-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-slate-900 transition-all shadow-xl disabled:opacity-50 whitespace-nowrap"
                     >
-                      Seed All Sections
+                      Seed 500 Per Section
                     </button>
                   </div>
                 </div>
