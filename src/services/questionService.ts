@@ -54,6 +54,8 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function getMCQCount(category?: string, topic?: string): Promise<number> {
   const path = "mcqs";
   try {
@@ -106,22 +108,45 @@ export async function generateMCQs(category: string, topic: string, count: numbe
     }
   };
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
-    contents: `Generate ${count} high-quality, recently asked multiple-choice questions for the ${category} exam on the topic: ${topic}. 
-    Ensure the questions are accurate, have clear explanations, and cover various difficulty levels.
-    The exam types should include ${category} and relevant national exams like SSC.`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: MCQ_SCHEMA,
-    },
-  });
+  let retries = 0;
+  const maxRetries = 5;
+  const baseDelay = 2000;
 
-  if (!response.text) {
-    throw new Error("Empty response from Gemini");
+  while (retries < maxRetries) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents: `Generate ${count} high-quality, recently asked multiple-choice questions for the ${category} exam on the topic: ${topic}. 
+        Ensure the questions are accurate, have clear explanations, and cover various difficulty levels.
+        The exam types should include ${category} and relevant national exams like SSC.`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: MCQ_SCHEMA,
+        },
+      });
+
+      if (!response.text) {
+        throw new Error("Empty response from Gemini");
+      }
+
+      return JSON.parse(response.text) as MCQ[];
+    } catch (error: any) {
+      const isRateLimit = error?.message?.includes('429') || error?.status === 'RESOURCE_EXHAUSTED' || error?.code === 429;
+      
+      if (isRateLimit && retries < maxRetries - 1) {
+        retries++;
+        const delay = baseDelay * Math.pow(2, retries);
+        console.warn(`Gemini Rate Limit hit. Retrying in ${delay}ms... (Attempt ${retries}/${maxRetries})`);
+        await wait(delay);
+        continue;
+      }
+      
+      console.error("Error generating MCQs:", error);
+      throw error;
+    }
   }
-
-  return JSON.parse(response.text) as MCQ[];
+  
+  return [];
 }
 
 export async function generateAndStoreMCQs(category: string, topic: string, count: number = 10) {

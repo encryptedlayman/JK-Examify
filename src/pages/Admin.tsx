@@ -61,6 +61,11 @@ export default function Admin() {
         setStatus(`Batch ${i + 1}/${batches}: Generating ${count} questions...`);
         await generateAndStoreMCQs(selectedCategory, selectedTopic, count);
         setProgress(prev => ({ ...prev, current: i + 1 }));
+        
+        // Add a small delay between batches to avoid rate limits
+        if (i < batches - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
 
       setStatus('Bulk generation completed!');
@@ -262,6 +267,9 @@ export default function Admin() {
                               setStatus(`Seeding ${cat.name} (${i+1}/${batchesPerCat}): ${topic}...`);
                               await generateAndStoreMCQs(cat.name, topic, batchSize);
                               setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+                              
+                              // Add a delay between batches in deep seed
+                              await new Promise(resolve => setTimeout(resolve, 2000));
                             }
                           }
                           setStatus('Deep seed completed! 500 MCQs added to every section.');

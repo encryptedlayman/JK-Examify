@@ -59,31 +59,49 @@ export async function generateMCQs(
   
   Return the result as a JSON array matching the schema.`;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: MCQ_SCHEMA
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  let retries = 0;
+  const maxRetries = 5;
+  const baseDelay = 2000;
+
+  while (retries < maxRetries) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: MCQ_SCHEMA
+        }
+      });
+
+      if (!response.text) {
+        throw new Error("Empty response from Gemini");
       }
-    });
 
-    if (!response.text) {
-      throw new Error("Empty response from Gemini");
+      const rawMcqs = JSON.parse(response.text);
+      return rawMcqs.map((m: any) => ({
+        ...m,
+        category,
+        topic,
+        examType: ["JKSSB", "SSC"]
+      }));
+    } catch (error: any) {
+      const isRateLimit = error?.message?.includes('429') || error?.status === 'RESOURCE_EXHAUSTED' || error?.code === 429;
+      
+      if (isRateLimit && retries < maxRetries - 1) {
+        retries++;
+        const delay = baseDelay * Math.pow(2, retries);
+        console.warn(`Gemini Rate Limit hit. Retrying in ${delay}ms... (Attempt ${retries}/${maxRetries})`);
+        await wait(delay);
+        continue;
+      }
+      
+      console.error("Error generating MCQs:", error);
+      return [];
     }
-
-    const rawMcqs = JSON.parse(response.text);
-    return rawMcqs.map((m: any) => ({
-      ...m,
-      category,
-      topic,
-      examType: ["JKSSB", "SSC"]
-    }));
-  } catch (error) {
-    console.error("Error generating MCQs:", error);
-    return [];
   }
+  return [];
 }
 
 export async function seedMCQs(category: string, topic: string) {
