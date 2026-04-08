@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { generateAndStoreMCQs, getMCQCount } from '../services/questionService';
+import { generateAndStoreMCQs, getMCQCount, generateAndStoreMCQsFromPDF } from '../services/questionService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Database, Zap, CheckCircle, AlertCircle, Loader2, Plus, FileJson, BarChart3, ChevronRight, Search, Trash2, Edit3 } from 'lucide-react';
+import { Database, Zap, CheckCircle, AlertCircle, Loader2, Plus, FileJson, BarChart3, ChevronRight, Search, Trash2, Edit3, FileUp } from 'lucide-react';
 import { CATEGORIES, DIFFICULTIES } from '../constants';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -12,12 +12,15 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [stats, setStats] = useState<Record<string, number>>({});
-  const [activeTab, setActiveTab] = useState<'bulk' | 'manual' | 'stats'>('bulk');
+  const [activeTab, setActiveTab] = useState<'bulk' | 'manual' | 'stats' | 'pdf'>('bulk');
 
   // Bulk Gen State
   const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0].name);
   const [selectedTopic, setSelectedTopic] = useState(CATEGORIES[0].topics[0]);
   const [numQuestions, setNumQuestions] = useState(20);
+
+  // PDF State
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
   // Manual Add State
   const [manualMCQ, setManualMCQ] = useState({
@@ -103,6 +106,36 @@ export default function Admin() {
     }
   };
 
+  const handlePDFUpload = async () => {
+    if (!pdfFile) return;
+    setLoading(true);
+    setStatus(`Processing PDF and generating ${numQuestions} questions...`);
+    
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(pdfFile);
+      const pdfBase64 = await base64Promise;
+
+      await generateAndStoreMCQsFromPDF(selectedCategory, selectedTopic, pdfBase64, numQuestions);
+      
+      setStatus('PDF processing and generation completed!');
+      setPdfFile(null);
+      loadStats();
+    } catch (error: any) {
+      console.error('PDF generation failed:', error);
+      setStatus(`PDF generation failed: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 space-y-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -116,9 +149,10 @@ export default function Admin() {
           </div>
         </div>
 
-        <div className="flex bg-slate-100 p-1.5 rounded-2xl">
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl overflow-x-auto">
           {[
             { id: 'bulk', label: 'Bulk Gen', icon: Zap },
+            { id: 'pdf', label: 'PDF Seed', icon: FileUp },
             { id: 'manual', label: 'Manual Add', icon: Plus },
             { id: 'stats', label: 'Statistics', icon: BarChart3 }
           ].map(tab => (
@@ -126,7 +160,7 @@ export default function Admin() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex items-center space-x-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all",
+                "flex items-center space-x-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
                 activeTab === tab.id ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
               )}
             >
@@ -304,6 +338,103 @@ export default function Admin() {
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'pdf' && (
+              <motion.div
+                key="pdf"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100 space-y-8"
+              >
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-black text-slate-900">PDF Question Seeding</h2>
+                  <p className="text-slate-500">Upload a PDF file and let Gemini extract MCQs from it.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider">Target Category</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => {
+                        setSelectedCategory(e.target.value);
+                        const cat = CATEGORIES.find(c => c.name === e.target.value);
+                        if (cat) setSelectedTopic(cat.topics[0]);
+                      }}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      {CATEGORIES.map(cat => (
+                        <option key={cat.id} value={cat.name}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider">Target Topic</label>
+                    <select
+                      value={selectedTopic}
+                      onChange={(e) => setSelectedTopic(e.target.value)}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      {CATEGORIES.find(c => c.name === selectedCategory)?.topics.map(topic => (
+                        <option key={topic} value={topic}>{topic}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider">Questions to Extract</label>
+                    <input
+                      type="number"
+                      value={numQuestions}
+                      onChange={(e) => setNumQuestions(Number(e.target.value))}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider">Upload PDF</label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                        id="pdf-upload"
+                      />
+                      <label
+                        htmlFor="pdf-upload"
+                        className="flex items-center justify-center space-x-2 w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl font-bold cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
+                      >
+                        <FileUp className="w-5 h-5 text-slate-400" />
+                        <span className="text-slate-600">{pdfFile ? pdfFile.name : 'Choose PDF File'}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-end pt-4">
+                  <button
+                    onClick={handlePDFUpload}
+                    disabled={loading || !pdfFile}
+                    className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center space-x-3"
+                  >
+                    {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <FileUp className="w-6 h-6" />}
+                    <span>{loading ? 'Processing PDF...' : 'Generate from PDF'}</span>
+                  </button>
+                </div>
+
+                {status && (
+                  <div className={cn(
+                    "p-6 rounded-3xl border flex items-start space-x-4",
+                    status.includes('Error') || status.includes('failed') ? "bg-red-50 border-red-100 text-red-700" : "bg-blue-50 border-blue-100 text-blue-700"
+                  )}>
+                    <p className="font-bold">{status}</p>
                   </div>
                 )}
               </motion.div>

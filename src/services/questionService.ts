@@ -149,6 +149,105 @@ export async function generateMCQs(category: string, topic: string, count: numbe
   return [];
 }
 
+export async function generateMCQsFromPDF(category: string, topic: string, pdfBase64: string, count: number = 20) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("GEMINI_API_KEY is missing");
+    return [];
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const MCQ_SCHEMA = {
+    type: Type.ARRAY,
+    items: {
+      type: Type.OBJECT,
+      properties: {
+        question: { type: Type.STRING },
+        options: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Exactly 4 options"
+        },
+        answer: { type: Type.INTEGER, description: "0-3 index of correct option" },
+        explanation: { type: Type.STRING },
+        difficulty: { type: Type.STRING, description: "Difficulty level: Easy, Medium, or Hard" },
+        topic: { type: Type.STRING },
+        category: { type: Type.STRING },
+        examType: { type: Type.ARRAY, items: { type: Type.STRING } }
+      },
+      required: ["question", "options", "answer", "explanation", "difficulty", "topic", "category"]
+    }
+  };
+
+  let retries = 0;
+  const maxRetries = 3;
+  const baseDelay = 2000;
+
+  while (retries < maxRetries) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents: {
+          parts: [
+            { inlineData: { data: pdfBase64, mimeType: "application/pdf" } },
+            { text: `Generate ${count} high-quality MCQs from the provided PDF for the ${category} exam on the topic: ${topic}.` }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: MCQ_SCHEMA,
+        },
+      });
+
+      if (!response.text) {
+        throw new Error("Empty response from Gemini");
+      }
+
+      return JSON.parse(response.text) as MCQ[];
+    } catch (error: any) {
+      const isRateLimit = error?.message?.includes('429') || error?.status === 'RESOURCE_EXHAUSTED' || error?.code === 429;
+      
+      if (isRateLimit && retries < maxRetries - 1) {
+        retries++;
+        const delay = baseDelay * Math.pow(2, retries);
+        await wait(delay);
+        continue;
+      }
+      
+      console.error("Error generating MCQs from PDF:", error);
+      throw error;
+    }
+  }
+  
+  return [];
+}
+
+export async function generateAndStoreMCQsFromPDF(category: string, topic: string, pdfBase64: string, count: number = 20) {
+  try {
+    const questions = await generateMCQsFromPDF(category, topic, pdfBase64, count);
+    
+    const mcqCollection = collection(db, "mcqs");
+    const promises = questions.map(async (q) => {
+      try {
+        return await addDoc(mcqCollection, {
+          ...q,
+          createdAt: new Date().toISOString()
+        });
+      } catch (error) {
+        console.warn("Could not store MCQ due to permissions:", error);
+        return null;
+      }
+    });
+
+    await Promise.all(promises);
+    return questions;
+  } catch (error) {
+    console.error("Error generating/storing MCQs from PDF:", error);
+    throw error;
+  }
+}
+
 export async function generateAndStoreMCQs(category: string, topic: string, count: number = 10) {
   try {
     const questions = await generateMCQs(category, topic, count);
