@@ -61,6 +61,37 @@ export default function Test() {
   const [startTime] = useState(Date.now());
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [showRestartConfirm, setShowRestartConfirm] = useState(false);
+  const [shareStatus, setShareStatus] = useState<'idle' | 'sharing' | 'copied' | 'error'>('idle');
+
+  const handleShare = async (correctCount: number, total: number, accuracy: number, timeTaken: number) => {
+    const summary = `🏆 I just completed a test on JK Examify!\n\n📚 Topic: ${decodedTopic}\n✅ Score: ${correctCount}/${total}\n🎯 Accuracy: ${accuracy}%\n⏱️ Time: ${formatTime(timeTaken)}\n\nPractice now at: ${window.location.origin}`;
+
+    if (navigator.share) {
+      try {
+        setShareStatus('sharing');
+        await navigator.share({
+          title: 'My JK Examify Result',
+          text: summary,
+          url: window.location.origin,
+        });
+        setShareStatus('idle');
+      } catch (err) {
+        // User might have cancelled
+        setShareStatus('idle');
+        console.log('Share cancelled or failed', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(summary);
+        setShareStatus('copied');
+        setTimeout(() => setShareStatus('idle'), 2000);
+      } catch (err) {
+        console.error('Error copying:', err);
+        setShareStatus('error');
+        setTimeout(() => setShareStatus('idle'), 2000);
+      }
+    }
+  };
 
   useEffect(() => {
     async function loadMCQs() {
@@ -253,9 +284,24 @@ export default function Test() {
               <Home className="w-5 h-5" />
               <span>Go to Dashboard</span>
             </button>
-            <button className="w-full sm:w-auto bg-slate-100 text-slate-700 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-200 transition-all flex items-center justify-center space-x-2">
-              <Share2 className="w-5 h-5" />
-              <span>Share Result</span>
+            <button
+              onClick={() => handleShare(correctCount, mcqs.length, accuracy, timeTaken)}
+              className={cn(
+                "w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center space-x-2",
+                shareStatus === 'copied' ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              )}
+            >
+              {shareStatus === 'copied' ? (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-5 h-5" />
+                  <span>Share Result</span>
+                </>
+              )}
             </button>
           </div>
         </div>

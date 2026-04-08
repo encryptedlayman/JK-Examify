@@ -4,6 +4,7 @@ import { auth } from './firebase';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
+import About from './pages/About';
 import Categories from './pages/Categories';
 import Topic from './pages/Topic';
 import Test from './pages/Test';
@@ -49,6 +50,7 @@ export default function App() {
             <AnimatePresence mode="wait">
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/about" element={<About />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/category/:categoryId" element={<Categories />} />
