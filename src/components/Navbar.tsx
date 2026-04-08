@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, googleProvider } from '../firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
-import { LayoutDashboard, Trophy, BookOpen, LogIn, LogOut, Menu, X, Users } from 'lucide-react';
+import { LayoutDashboard, Trophy, BookOpen, LogIn, LogOut, Menu, X, Users, ShieldAlert, Database } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -22,6 +22,10 @@ export default function Navbar() {
     { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
     { name: 'About', path: '/about', icon: Users },
     ...(user ? [{ name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard }] : []),
+    ...(user?.email === 'flust1996@gmail.com' ? [
+      { name: 'Admin', path: '/admin', icon: Database },
+      { name: 'Super Admin', path: '/super-admin', icon: ShieldAlert }
+    ] : []),
   ];
 
   return (

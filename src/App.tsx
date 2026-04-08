@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
 import Admin from './pages/Admin';
+import SuperAdmin from './pages/SuperAdmin';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AnimatePresence } from 'motion/react';
 
@@ -69,6 +70,11 @@ export default function App() {
                 <Route path="/admin" element={
                   <ProtectedRoute adminOnly>
                     <Admin />
+                  </ProtectedRoute>
+                } />
+                <Route path="/super-admin" element={
+                  <ProtectedRoute adminOnly>
+                    <SuperAdmin />
                   </ProtectedRoute>
                 } />
               </Routes>
