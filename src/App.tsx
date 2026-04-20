@@ -13,6 +13,7 @@ import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
 import Admin from './pages/Admin';
 import SuperAdmin from './pages/SuperAdmin';
+import Accountancy from './pages/Accountancy';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AnimatePresence } from 'motion/react';
 
@@ -77,6 +78,7 @@ export default function App() {
                     <SuperAdmin />
                   </ProtectedRoute>
                 } />
+                <Route path="/accountancy" element={<Accountancy />} />
               </Routes>
             </AnimatePresence>
           </main>
