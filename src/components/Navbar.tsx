@@ -21,6 +21,7 @@ export default function Navbar() {
     { name: 'Categories', path: '/categories', icon: BookOpen },
     { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
     { name: 'Accountancy', path: '/accountancy', icon: Calculator },
+    { name: 'Mock Test', path: '/accountancy-mock', icon: Database },
     { name: 'About', path: '/about', icon: Users },
     ...(user ? [{ name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard }] : []),
     ...(user?.email === 'flust1996@gmail.com' ? [

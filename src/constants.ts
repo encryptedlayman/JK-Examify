@@ -90,6 +90,20 @@ export const CATEGORIES = [
       'Important Personalities',
       'Current Affairs (JK)'
     ]
+  },
+  {
+    id: 'accountancy',
+    name: 'Accountancy',
+    examTypes: ['JKSSB'],
+    topics: [
+      'Basic Accounting Principles',
+      'Journal & Ledger',
+      'Bank Reconciliation',
+      'Cash Flow Statement',
+      'Partnership Accounts',
+      'Company Accounts',
+      'Analysis of Financial Statements'
+    ]
   }
 ];
 
