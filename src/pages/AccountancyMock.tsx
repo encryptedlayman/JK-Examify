@@ -2,17 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Calculator, RotateCcw } from 'lucide-react';
-
-const QUESTIONS = [
-  {
-    topic: "Placeholder",
-    statement: "This is a placeholder for your custom mock test.",
-    q: "Ready to add your questions?",
-    opts: ["Yes", "Sure", "Absolutely", "Definitely"],
-    ans: 0,
-    exp: "You can replace this QUESTIONS array with your own data."
-  }
-];
+import { ACCOUNTANCY_MOCK_DATA as QUESTIONS } from '../data/accountancyQuestions';
 
 export default function AccountancyMock() {
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
